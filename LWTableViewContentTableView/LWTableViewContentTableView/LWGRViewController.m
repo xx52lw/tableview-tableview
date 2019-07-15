@@ -201,4 +201,196 @@
 }
 
 @end
+
+
+/*
+ 
+ 
+ 
+ import UIKit
+ 
+ class CPGDViewController: CPBaseViewController {
+ 
+ 
+ /// 头部视图
+ lazy var headerView: UIView = {
+ let view = UIView()
+ view.frame = CGRect.init(x: 0.0, y: 0.0, width: self.view.frame.size.width, height: 100)
+ view.backgroundColor = .red
+ return view
+ }()
+ 
+ // MARK: 列表视图
+ /// 列表视图GRTableView
+ lazy var tableView: CPGRTableView = {
+ let view = CPGRTableView.init(frame: CGRect.zero, style: UITableView.Style.plain)
+ view.backgroundColor = UIColor.clear
+ view.separatorStyle = .none
+ view.delegate = self
+ view.dataSource = self
+ view.tag = 999
+ view.showsVerticalScrollIndicator = false
+ view.showsHorizontalScrollIndicator = false
+ return view
+ }()
+ // MARK: 子控制器数组
+ var childViews = [CPGRView]()
+ // MARK: 是否可以滚动
+ var canScroll = true
+ var offset_y = 0.0
+ 
+ // MARK: 标题视图
+ /// 标题视图
+ lazy var itemView: CPTitleNavView = {
+ let view = CPTitleNavView()
+ view.backgroundColor = .white
+ //        view.delegate = self
+ view.titleColor = UIColor.black
+ view.titleSelectColor = UIColor.red
+ view.lineBottomMargin = 0.0
+ view.titleFont = UIFont.systemFont(ofSize: 15.0)
+ view.titleSelectFont = UIFont.systemFont(ofSize: 15.0)
+ view.titleArray = ["热门跟单","人气跟单","我的关注"]
+ view.allLineColor = UIColor.lightGray
+ return view
+ }()
+ /// 固定选项组
+ var itemViewAdjective = false
+ override func viewDidLoad() {
+ super.viewDidLoad()
+ addViewSubviews()
+ }
+ override func viewWillLayoutSubviews() {
+ super.viewWillLayoutSubviews()
+ self.tableView.frame = self.view.bounds;
+ }
+ // MARK: - 重写viewWillAppear
+ override func viewWillAppear(_ animated: Bool) {
+ super.viewWillAppear(animated)
+ CPAddNotification(self, selector: #selector(changeVCScrollState), NotificationName: kScrollStateNotify)
+ 
+ }
+ // MARK: - 重写viewWillDisappear
+ override func viewWillDisappear(_ animated: Bool) {
+ super.viewWillDisappear(animated)
+ CPRemoveNotification(self, NotificationName: kScrollStateNotify)
+ }
+ deinit {
+ CPRemoveNotification(self, NotificationName: kScrollStateNotify)
+ }
+ @objc func changeVCScrollState() {
+ self.canScroll = true
+ for index in 0..<childViews.count {
+ let childView = childViews[index]
+ childView.vcCanScroll = false
+ }
+ }
+ 
+ }
+ // =================================================================================================================================
+ // MARK: - 跟单视图控制器
+ extension CPGDViewController {
+ /// 添加子控件
+ //MARK: - 添加子控件
+ func addViewSubviews() {
+ if #available(iOS 11.0, *) {
+ tableView.contentInsetAdjustmentBehavior = .never
+ } else {
+ self.automaticallyAdjustsScrollViewInsets = false
+ }
+ tableView.estimatedSectionHeaderHeight = 0.0
+ tableView.estimatedSectionFooterHeight = 0.0
+ self.canScroll = true
+ self.tableView.tableHeaderView = headerView;
+ self.view.addSubview(self.tableView)
+ tableView.reloadData()
+ }
+ }
+ // =================================================================================================================================
+ // MARK: - 跟单视图控制器UITableViewDelegateDataSource
+ extension CPGDViewController :UITableViewDelegate, UITableViewDataSource {
+ 
+ /// cell数量
+ func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+ return 1
+ }
+ // MARK: cell高度
+ func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+ 
+ return tableView.frame.size.height
+ }
+ // MARK: cell样式
+ func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+ let identifier = "CPViewController"
+ var cell : UITableViewCell? = tableView.dequeueReusableCell(withIdentifier: identifier)
+ if cell == nil {
+ cell = UITableViewCell.init(style: .default, reuseIdentifier: identifier)
+ cell?.backgroundColor = .white
+ cell?.selectionStyle = .none
+ }
+ 
+ var x :CGFloat = 0.0
+ var y :CGFloat = 0.0
+ var w :CGFloat = tableView.frame.size.width
+ var h :CGFloat = 44.0
+ 
+ self.itemView.frame = CGRect.init(x: x, y: y, width: w, height: h)
+ itemView.cellWidth = itemView.frame.size.width / CGFloat(self.itemView.titleArray.count)
+ itemView.showView()
+ cell?.contentView.addSubview(self.itemView)
+ 
+ y = self.itemView.frame.maxY;
+ h = tableView.frame.size.height - y;
+ let sc = UIScrollView.init(frame: CGRect.init(x: x, y: y, width: w, height: h))
+ sc.backgroundColor = UIColor.lightGray
+ cell?.contentView.addSubview(sc)
+ let vc = CPGRView.init(frame: CGRect.init(x: 0.0, y: 0.0, width: w, height: h))
+ vc.backgroundColor = UIColor.white
+ sc.addSubview(vc)
+ childViews.append(vc)
+ let vc1 = CPGRView.init(frame: CGRect.init(x: w, y: 0.0, width: w, height: h))
+ vc1.backgroundColor = UIColor.blue
+ sc.addSubview(vc1)
+ childViews.append(vc1)
+ sc.contentSize = CGSize.init(width: w * CGFloat(childViews.count), height: h)
+ return cell!
+ }
+ // MARK: 选择cell
+ func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+ tableView.deselectRow(at: indexPath, animated: false)
+ }
+ 
+ func scrollViewDidScroll(_ scrollView: UIScrollView) {
+ 
+ if (scrollView.tag == 999) {
+ let contentOffsetY :CGFloat = scrollView.contentOffset.y
+ /* 关键 */
+let headerOffset = self.headerView.frame.size.height;
+
+if (contentOffsetY >= headerOffset) {
+    scrollView.contentOffset = CGPoint.init(x: 0, y: headerOffset)
+    if (self.canScroll) {
+        self.canScroll = false;
+        canScroll = false
+        for index in 0..<childViews.count {
+            let childView = childViews[index]
+            childView.vcCanScroll = true
+        }
+    }
+    }
+    else {
+        if (!self.canScroll) {
+            scrollView.contentOffset = CGPoint.init(x: 0, y: headerOffset)
+        }
+    }
+    self.tableView.showsVerticalScrollIndicator = false
+    }
+
+}
+
+}
+
+ 
+ */
+
 //==========================================================================================================================================
